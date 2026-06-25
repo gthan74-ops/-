@@ -14,13 +14,20 @@ export default function Nav() {
         <Link href="/" className="serif text-base tracking-widest" style={{ color: 'var(--accent)' }}>
           오늘의 시
         </Link>
-        <div className="flex items-center gap-6 text-sm">
+        <div className="flex items-center gap-5 text-sm">
           <Link
             href="/poems"
             className="transition-colors hover:opacity-100"
-            style={{ color: path === '/poems' ? 'var(--accent)' : 'var(--text-muted)' }}
+            style={{ color: path === '/poems' || path?.startsWith('/poems/') ? 'var(--accent)' : 'var(--text-muted)' }}
           >
             시 아카이브
+          </Link>
+          <Link
+            href="/about"
+            className="transition-colors hover:opacity-100"
+            style={{ color: path === '/about' ? 'var(--accent)' : 'var(--text-muted)' }}
+          >
+            소개
           </Link>
           <Link
             href="/#subscribe"
