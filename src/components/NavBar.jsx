@@ -12,9 +12,9 @@ export default function NavBar() {
 
   const links = [
     { href: '#today', label: '오늘의 시' },
-    { href: '#archive', label: '시 아카이브' },
+    { href: '#archive', label: '아카이브' },
+    { href: '#community', label: '필사' },
     { href: '#pricing', label: '구독' },
-    { href: '#mission', label: '우리의 이야기' },
   ];
 
   const scrollTo = (href) => {
