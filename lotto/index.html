@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="description" content="로또 용지 QR을 찍어 이미 산 번호를 빼고, 고정수·제외수를 정해 큐비트 측정으로 새 번호를 뽑는 양자 얽힘 로또조합기 — 만든이 한규태">
+<meta name="description" content="로또 용지 QR을 찍으면 당첨 여부를 채점하고 이미 산 번호를 뺀 뒤, 고정수·제외수를 정해 큐비트 측정으로 새 번호를 뽑는 양자 얽힘 로또조합기 — 만든이 한규태">
 <meta property="og:title" content="양자 얽힘을 이용한 로또조합기">
-<meta property="og:description" content="용지 QR 한 장이면 이미 산 번호를 빼고, 고정수·제외수를 정해 큐비트 6개 측정으로 새 번호를 뽑습니다. 만든이 한규태">
+<meta property="og:description" content="용지 QR 한 장이면 당첨 채점 + 이미 산 번호 제외 + 큐비트 6개 측정으로 새 번호 생성. 만든이 한규태">
 <meta property="og:type" content="website">
 <meta name="theme-color" content="#5a3ee0">
 <style>
@@ -60,6 +60,14 @@ body{background:var(--bg);color:var(--fg);font-family:var(--body);line-height:1.
 .vh{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none}
 .found{display:grid;gap:4px;font-family:var(--mono);font-size:.8rem;color:var(--muted)}
 .found b{color:var(--up);font-weight:500}
+.found .win{color:var(--accent);font-weight:500}
+.found .hit{color:var(--fg);text-decoration:underline;text-decoration-color:var(--accent);text-underline-offset:3px}
+.latest{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.82rem;color:var(--muted);justify-content:center}
+.latest .mini{display:inline-flex;gap:4px}
+.latest .mini i{font-style:normal;font-family:var(--mono);font-size:.78rem;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;color:#fff;font-variant-numeric:tabular-nums}
+.latest .mini i.bo{background:transparent;border:1.5px solid var(--line);color:var(--fg)}
+.game{flex-wrap:wrap}
+.bal{flex-basis:100%;padding-left:calc(1.2em + 8px);font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-top:-2px}
 .grid{display:grid;grid-template-columns:repeat(9,1fr);gap:5px}
 .cell{aspect-ratio:1;max-width:100%;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--fg);
   font-family:var(--mono);font-size:.9rem;cursor:pointer;display:grid;place-items:center;padding:0;font-variant-numeric:tabular-nums}
@@ -80,7 +88,7 @@ select{font:inherit;padding:9px 10px;border-radius:10px;border:1px solid var(--l
   font-size:1rem;color:#fff;background:var(--line);transition:transform .25s;font-variant-numeric:tabular-nums}
 .ball.super{color:var(--fg);background:transparent;border:1.5px dashed var(--glow);animation:fl .09s steps(1) infinite}
 .ball.settle{transform:scale(1.18)}
-.ball.r1{background:var(--b1);color:#1c1b33}.ball.r2{background:var(--b2)}.ball.r3{background:var(--b3)}.ball.r4{background:var(--b4)}.ball.r5{background:var(--b5)}
+.r1{background:var(--b1);color:#1c1b33}.r2{background:var(--b2)}.r3{background:var(--b3)}.r4{background:var(--b4)}.r5{background:var(--b5)}
 @keyframes fl{50%{opacity:.5}}
 @media (prefers-reduced-motion:reduce){.ball.super{animation:none}.ball{transition:none}}
 .meta{font-family:var(--mono);font-size:.75rem;color:var(--muted)}
@@ -98,6 +106,8 @@ select{font:inherit;padding:9px 10px;border-radius:10px;border:1px solid var(--l
     <p class="ket">|ψ⟩ = H<sup>⊗6</sup>|000000⟩</p>
   </header>
 
+  <div class="latest" id="latest" hidden></div>
+
   <section class="card">
     <div class="step"><b>1. 이미 산 로또 있어?</b><small>없으면 바로 2번으로</small></div>
     <button class="qr" id="qrBtn" type="button">
@@ -109,7 +119,7 @@ select{font:inherit;padding:9px 10px;border-radius:10px;border:1px solid var(--l
       <span>용지 QR 찍기<small>오른쪽 위 QR 코드가 잘 보이게 찍어 주세요</small></span>
     </button>
     <input class="vh" type="file" id="cam" accept="image/*" capture="environment" tabindex="-1">
-    <p class="hint" id="qrHint">QR 안에 번호가 들어 있어서 사진 한 장이면 자동으로 표시됩니다. 직접 눌러서 표시해도 돼요.</p>
+    <p class="hint" id="qrHint">QR 한 장이면 번호를 제외수로 올리고, 추첨이 끝난 회차면 몇 등인지도 바로 채점합니다. 직접 눌러서 표시해도 돼요.</p>
     <div class="found" id="found" hidden></div>
     <div class="modes">
       <button class="mode on" data-m="fix" id="mFix" type="button">고정수</button>
@@ -141,7 +151,7 @@ select{font:inherit;padding:9px 10px;border-radius:10px;border:1px solid var(--l
     <div class="toast" id="toast"></div>
   </section>
 
-  <p class="fine">큐비트 6개를 H 게이트로 겹친 뒤 측정해 64개 상태 중 하나로 붕괴시킵니다. 이미 산 번호에 떨어지면 기각하고 다시 측정해요. 1등 확률은 어떻게 뽑든 1/8,145,060, 예측이 아니라 편향 없이 고르는 도구입니다. QR은 폰 안에서만 읽고 어디에도 보내지 않아요.</p>
+  <p class="fine">큐비트 6개를 H 게이트로 겹친 뒤 측정해 64개 상태 중 하나로 붕괴시킵니다. 이미 산 번호에 떨어지면 기각하고 다시 측정해요. 1등 확률은 어떻게 뽑든 1/8,145,060, 홀짝·저고·합계 밸런스도 참고용일 뿐 확률은 똑같습니다. QR은 폰 안에서만 읽고 어디에도 보내지 않아요. 당첨번호는 매주 토요일 밤 자동 갱신.</p>
 </div>
 
 <script>
@@ -177,6 +187,50 @@ function renderGrid(){const g=$('grid');g.innerHTML='';
 $('clear').onclick=()=>{up.clear();fix.clear();tickets=[];$('found').hidden=true;renderGrid();};
 renderGrid();
 
+// ---- 당첨번호 (같은 폴더의 draws.json, GitHub Actions가 매주 갱신) ----
+let draws=null; // {latest, draws:{"1248":{d,n:[6],b}}}
+const pad2=v=>String(v).padStart(2,'0');
+const fmtD=d=>{const [y,m,dd]=d.split('-');return `${+m}/${+dd}`;};
+function drawDateOf(round){ // 알려진 최신 회차 날짜에서 주 단위로 추정
+  if(!draws) return null; const L=draws.draws[String(draws.latest)]; if(!L) return null;
+  const t=new Date(L.d+'T00:00:00'); t.setDate(t.getDate()+7*(round-draws.latest)); return `${t.getMonth()+1}/${t.getDate()}(토)`;
+}
+function score(nums,dr){ // 등수: 6개=1, 5개+보너스=2, 5개=3, 4개=4, 3개=5
+  const hit=nums.filter(v=>dr.n.includes(v)); const m=hit.length, bo=nums.includes(dr.b);
+  const r=m===6?1:(m===5&&bo)?2:m===5?3:m===4?4:m===3?5:0; return {m,bo,r,hit};
+}
+const RANK=['낙첨','1등','2등','3등','4등','5등'];
+(async()=>{
+  try{const r=await fetch('draws.json',{cache:'no-store'}); if(!r.ok) return; const j=await r.json();
+    if(!j||!j.draws||!j.latest) return; draws=j;
+    const L=draws.draws[String(draws.latest)];
+    $('latest').innerHTML=`<span>최근 추첨 제${draws.latest}회 (${fmtD(L.d)})</span><span class="mini">${L.n.map(v=>`<i class="r${rank(v)}">${v}</i>`).join('')}<i class="bo">+${L.b}</i></span>`;
+    $('latest').hidden=false; if(tickets.length) renderFound();
+  }catch(e){}
+})();
+function renderFound(){
+  const html=tickets.map(tk=>{
+    const dr=draws&&draws.draws[String(tk.round)];
+    const head=dr?`제${tk.round}회 · ${tk.games.length}게임 · 당첨번호 ${dr.n.map(pad2).join(' ')} +${dr.b}`
+      :`제${tk.round}회 · ${tk.games.length}게임 · 추첨 전${drawDateOf(tk.round)?' ('+drawDateOf(tk.round)+' 추첨)':''}`;
+    const rows=tk.games.map((g,i)=>{
+      const tag=String.fromCharCode(65+i);
+      if(!dr) return `<span>${tag}  ${g.map(pad2).join(' ')}</span>`;
+      const s=score(g,dr);
+      const nums=g.map(v=>s.hit.includes(v)?`<span class="hit">${pad2(v)}</span>`:pad2(v)).join(' ');
+      const res=s.r?`<span class="win">${RANK[s.r]}</span>`:`${s.m}개 일치${s.bo?' +보너스':''} · 낙첨`;
+      return `<span>${tag}  ${nums}  ${res}</span>`;
+    }).join('');
+    let sum='';
+    if(dr){const best=Math.min(...tk.games.map(g=>score(g,dr).r||9));
+      sum=best<9?`<span class="win">축하해요! 이 용지에서 ${RANK[best]} 당첨 게임이 있어요.</span>`:`<span>이 용지는 전부 낙첨이에요. 다음 회차로 가요.</span>`;}
+    return `<span>${head}</span>${rows}${sum}`;
+  }).join('')+`<span><b>${up.size}개</b> 번호를 얽힌 짝(제외수)으로 표시했어요.</span>`;
+  $('found').innerHTML=html; $('found').hidden=false;
+}
+function balance(g){const odd=g.filter(v=>v%2).length, low=g.filter(v=>v<=22).length, sum=g.reduce((a,b)=>a+b,0);
+  return `홀${odd}·짝${6-odd}  저${low}·고${6-low}  합 ${sum}`;}
+
 // ---- 용지 QR 읽기: 동행복권 QR = http://qr.dhlottery.co.kr/?v=회차 + (q|m)+12자리 × 게임수 + 일련번호 ----
 function parseTicket(text){
   const m=/v=(\d{3,5})((?:[qm]\d{12})+)/i.exec(text||''); if(!m) return null;
@@ -209,10 +263,7 @@ async function readTicket(file){
     const t=parseTicket(text);
     if(!t){hint.textContent='로또 용지 QR이 아닌 것 같아요. 용지 오른쪽 위의 QR을 찍어 주세요.';return;}
     tickets.push(t); t.games.forEach(g=>g.forEach(v=>{fix.delete(v);up.add(v);})); renderGrid();
-    $('found').innerHTML=tickets.map(tk=>`<span>제${tk.round}회 · ${tk.games.length}게임</span>`+
-      tk.games.map((g,i)=>`<span>${String.fromCharCode(65+i)}  ${g.map(v=>String(v).padStart(2,'0')).join(' ')}</span>`).join('')).join('')+
-      `<span><b>${up.size}개</b> 번호를 얽힌 짝으로 표시했어요.</span>`;
-    $('found').hidden=false; hint.textContent='용지가 더 있으면 QR을 또 찍으면 번호가 추가됩니다.';
+    renderFound(); hint.textContent='용지가 더 있으면 QR을 또 찍으면 번호가 추가됩니다.';
   }catch(e){hint.textContent='사진을 열지 못했어요. 다시 찍어 주세요.';}
   finally{btn.disabled=false;}
 }
@@ -243,7 +294,8 @@ async function run(){
       if(!reduce){const end=Date.now()+Math.max(0,spin-(Date.now()-t0));while(Date.now()<end){el.textContent=pool[Math.floor(rnd()*pool.length)];await sleep(45);}}
       picked.push(val);el.className=`ball r${rank(val)} settle`;el.textContent=val;await sleep(reduce?0:settle);el.classList.remove('settle');}
     picked.sort((a,b)=>a-b);results.push(picked);
-    picked.forEach((v,j)=>{const el=$(`b${i}_${j}`);el.className=`ball r${rank(v)}`;el.textContent=v;});}
+    picked.forEach((v,j)=>{const el=$(`b${i}_${j}`);el.className=`ball r${rank(v)}`;el.textContent=v;});
+    const bl=document.createElement('div');bl.className='bal';bl.textContent=balance(picked);$(`b${i}_0`).parentElement.parentElement.appendChild(bl);}
   $('meta').textContent=`측정 ${meas}회 · 기각 ${rej}회 · 남은 숫자 ${pool.length}개에서 붕괴`+(fix.size?` · 고정 ${fixed.join(' ')}`:'');
   go.disabled=false;go.textContent='다시 생성하기';
 }
