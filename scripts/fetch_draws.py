@@ -1,63 +1,37 @@
 #!/usr/bin/env python3
-"""동행복권 로또 6/45 당첨번호를 받아 draws.json을 갱신한다.
+"""로또 6/45 당첨번호를 받아 draws.json을 갱신한다.
 
 사용: python3 scripts/fetch_draws.py <draws.json 경로>
-- 파일이 있으면 마지막 회차 다음부터, 없으면 1회부터 받는다.
-- 존재하지 않는 회차(returnValue != success)를 만나면 멈춘다.
-- 새 회차가 하나도 없고 기존 파일도 없으면 실패(exit 1)로 알린다.
+
+1차: smok95/lotto 미러(GitHub Pages, 추첨 직후 갱신)에서 전체 회차 JSON
+2차: 동행복권 공식 조회 (국내 IP에서만 응답하므로 GitHub 서버에서는 보통 실패)
+둘 다 실패하면 기존 파일을 그대로 두고 exit 1.
+
+출력 형식: {"updated": ISO, "latest": N, "draws": {"N": {"d": "YYYY-MM-DD", "n": [6], "b": 보너스, "w": 1등금액, "c": 1등인원}}}
 """
 import json, sys, time, urllib.request, datetime
 
-URL = "https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo={}"
+MIRROR = "https://smok95.github.io/lotto/results/all.json"
+OFFICIAL = "https://www.dhlottery.co.kr/common.do?method=getLottoNumber&drwNo={}"
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0 Safari/537.36",
     "Accept": "application/json,text/plain,*/*",
-    "Referer": "https://www.dhlottery.co.kr/",
 }
 
-def fetch(no, tries=3):
-    for t in range(tries):
-        try:
-            req = urllib.request.Request(URL.format(no), headers=HEADERS)
-            with urllib.request.urlopen(req, timeout=20) as r:
-                body = r.read().decode("utf-8", "replace")
-            data = json.loads(body)
-            if data.get("returnValue") != "success":
-                return None
-            return {
-                "d": data["drwNoDate"],
-                "n": [int(data[f"drwtNo{i}"]) for i in range(1, 7)],
-                "b": int(data["bnusNo"]),
-                "w": int(data.get("firstWinamnt") or 0),
-                "c": int(data.get("firstPrzwnerCo") or 0),
-            }
-        except Exception as e:  # 네트워크 오류는 잠시 쉬고 재시도
-            print(f"round {no}: {e} (try {t+1}/{tries})", file=sys.stderr)
-            time.sleep(2 + 2 * t)
-    raise SystemExit(f"round {no}: 응답을 받지 못했습니다")
+def get_json(url, timeout=30):
+    req = urllib.request.Request(url, headers=HEADERS)
+    with urllib.request.urlopen(req, timeout=timeout) as r:
+        return json.loads(r.read().decode("utf-8", "replace"))
 
-def main(path):
+def load(path):
     try:
         with open(path, encoding="utf-8") as f:
-            store = json.load(f)
+            s = json.load(f)
+            return s.get("draws", {}) or {}
     except FileNotFoundError:
-        store = {"latest": 0, "draws": {}}
-    draws = store.get("draws", {})
-    start = int(store.get("latest") or 0) + 1
-    added = 0
-    no = start
-    while True:
-        row = fetch(no)
-        if row is None:
-            break
-        draws[str(no)] = row
-        added += 1
-        no += 1
-        if added % 50 == 0:
-            print(f"... {no-1}회까지 받음", file=sys.stderr)
-        time.sleep(0.15)
-    if not draws:
-        raise SystemExit("회차를 하나도 받지 못했습니다 (동행복권 응답 형식이 바뀌었거나 차단됨)")
+        return {}
+
+def save(path, draws):
     latest = max(int(k) for k in draws)
     store = {
         "updated": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
@@ -66,8 +40,58 @@ def main(path):
     }
     with open(path, "w", encoding="utf-8") as f:
         json.dump(store, f, ensure_ascii=False, separators=(",", ":"))
-    print(f"latest={latest} added={added}")
+    return latest
+
+def from_mirror(draws):
+    rows = get_json(MIRROR)
+    added = 0
+    for r in rows:
+        no = int(r["draw_no"]); nums = [int(x) for x in r["numbers"]]
+        if len(nums) != 6 or not all(1 <= x <= 45 for x in nums):
+            continue
+        div1 = (r.get("divisions") or [{}])[0] or {}
+        row = {"d": r["date"][:10], "n": nums, "b": int(r["bonus_no"]),
+               "w": int(div1.get("prize") or 0), "c": int(div1.get("winners") or 0)}
+        if draws.get(str(no)) != row:
+            draws[str(no)] = row; added += 1
     return added
+
+def from_official(draws):
+    no = (max((int(k) for k in draws), default=0)) + 1
+    added = 0
+    while True:
+        data = None
+        for t in range(2):
+            try:
+                data = get_json(OFFICIAL.format(no), timeout=20); break
+            except Exception as e:
+                print(f"official {no}: {e}", file=sys.stderr); time.sleep(2)
+        if not data or data.get("returnValue") != "success":
+            break
+        draws[str(no)] = {"d": data["drwNoDate"], "n": [int(data[f"drwtNo{i}"]) for i in range(1, 7)],
+                          "b": int(data["bnusNo"]), "w": int(data.get("firstWinamnt") or 0),
+                          "c": int(data.get("firstPrzwnerCo") or 0)}
+        added += 1; no += 1; time.sleep(0.15)
+    return added
+
+def main(path):
+    draws = load(path)
+    before = max((int(k) for k in draws), default=0)
+    added = 0; src = None
+    try:
+        added = from_mirror(draws); src = "mirror"
+    except Exception as e:
+        print(f"mirror failed: {e}", file=sys.stderr)
+        try:
+            added = from_official(draws); src = "official"
+        except Exception as e2:
+            print(f"official failed: {e2}", file=sys.stderr)
+    if not draws:
+        raise SystemExit("회차를 하나도 받지 못했습니다")
+    latest = save(path, draws)
+    print(f"source={src} latest={latest} (was {before}) changed={added}")
+    if src is None:
+        raise SystemExit(1)
 
 if __name__ == "__main__":
     main(sys.argv[1] if len(sys.argv) > 1 else "draws.json")
