@@ -1,0 +1,58 @@
+@import url('https://fonts.googleapis.com/css2?family=Noto+Serif+KR:wght@300;400;500;600&family=Noto+Sans+KR:wght@300;400;500&display=swap');
+@import "tailwindcss";
+
+:root {
+  --bg: #0c0c0c;
+  --bg-card: #141414;
+  --bg-hover: #1c1c1c;
+  --text: #e8e0d0;
+  --text-muted: #8a8070;
+  --accent: #c4a882;
+  --accent-dim: #7a6650;
+  --border: #2a2520;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: 'Noto Sans KR', 'Apple SD Gothic Neo', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body {
+  min-height: 100vh;
+  background-color: var(--bg);
+}
+
+.poem-text {
+  font-family: 'Noto Serif KR', 'Georgia', serif;
+  white-space: pre-wrap;
+  line-height: 2.1;
+  letter-spacing: 0.02em;
+}
+
+.serif {
+  font-family: 'Noto Serif KR', 'Georgia', serif;
+}
+
+::selection {
+  background: #3a2e20;
+  color: var(--accent);
+}
+
+::-webkit-scrollbar {
+  width: 4px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--accent-dim);
+  border-radius: 2px;
+}
