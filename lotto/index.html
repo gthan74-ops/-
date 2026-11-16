@@ -3,9 +3,9 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="description" content="로또 용지 QR을 비추면 당첨 여부를 채점하고 이미 산 번호를 뺀 뒤, 고정수·제외수를 정해 큐비트 측정으로 새 번호를 뽑는 양자 얽힘 로또조합기 — 만든이 한규태">
+<meta name="description" content="고정수와 제외수만 정하면 큐비트 6개 측정으로 나머지 번호를 뽑는 양자 얽힘 로또조합기 — 만든이 한규태">
 <meta property="og:title" content="양자 얽힘을 이용한 로또조합기">
-<meta property="og:description" content="용지 QR 한 번이면 당첨 채점 + 이미 산 번호 제외 + 큐비트 6개 측정으로 새 번호 생성. 만든이 한규태">
+<meta property="og:description" content="꼭 넣을 번호와 뺄 번호만 정하면, 나머지는 양자가 고릅니다. 1~10게임, 복사해서 카톡으로. 만든이 한규태">
 <meta property="og:type" content="website">
 <meta name="theme-color" content="#5a3ee0">
 <style>
@@ -16,9 +16,8 @@ img{max-width:100%}
 </style>
 <title>양자 얽힘을 이용한 로또조합기</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Noto+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@500&display=swap">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jsQR/1.4.0/jsQR.min.js"></script>
 <style>
-/* Layout: phone-first single column — 제목 → 1. 산 티켓 QR 찍기/손으로 표시 → 2. 측정 → 3. 결과·복사 → 한 줄 설명 */
+/* Layout: phone-first single column — 제목·만든이·소개 → 사용법 3줄 → 최근 당첨번호 → 1. 고정수/제외수 → 2. 번호 생성 → 3. 결과·복사 */
 :root{
   --bg:#f3f2fa; --panel:#ffffff; --fg:#1c1b33; --muted:#6c6b8a; --line:#dddbee;
   --accent:#5a3ee0; --accent-soft:#ebe6ff; --glow:#9b88ff; --up:#ff7a1a; --up-soft:#fff0e4;
@@ -37,47 +36,38 @@ img{max-width:100%}
 body{background:var(--bg);color:var(--fg);font-family:var(--body);line-height:1.55;
   padding-block:24px 56px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
 .wrap{max-width:560px;margin:0 auto;display:grid;gap:16px}
-.hero{text-align:center;display:grid;gap:4px;padding-block:6px}
+.hero{text-align:center;display:grid;gap:6px;padding-block:6px}
 .hero h1{font-family:var(--display);font-size:1.9rem;margin:0;line-height:1.15;letter-spacing:.01em;word-break:keep-all}
 .hero h1 span{color:var(--accent)}
-.hero p{margin:0;color:var(--muted);font-size:.92rem}
-.hero .maker{font-family:var(--display);font-size:1.35rem;color:var(--muted);margin-top:4px}
+.hero .maker{font-family:var(--display);font-size:1.35rem;color:var(--muted);margin:0}
 .hero .maker b{color:var(--fg);font-weight:400;font-size:1.6rem;margin-left:4px}
-.modes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.mode{border:2px solid var(--line);background:var(--panel);color:var(--muted);border-radius:12px;padding:10px;font:inherit;font-weight:700;font-size:1rem;cursor:pointer}
-.mode.on[data-m="fix"]{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
-.mode.on[data-m="ex"]{border-color:var(--up);color:var(--up);background:var(--up-soft)}
-.cell.fix{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
-.ket{font-family:var(--mono);color:var(--accent)}
+.hero .intro{margin:6px auto 0;color:var(--fg);font-size:.95rem;max-width:34ch;word-break:keep-all}
+.ket{font-family:var(--mono);color:var(--accent);font-size:.9rem;margin:0}
 .card{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:16px;display:grid;gap:12px}
 .step{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
 .step b{font-family:var(--display);font-size:1.25rem;font-weight:400}
 .step small{color:var(--muted);font-size:.85rem}
-.qr{display:flex;align-items:center;gap:14px;border:1.5px dashed var(--accent);background:var(--accent-soft);color:var(--accent);border-radius:14px;padding:14px 16px;font:inherit;font-weight:700;cursor:pointer;text-align:left;width:100%}
-.qr svg{flex:none;width:36px;height:36px}
-.qr small{display:block;font-weight:400;font-size:.8rem;color:var(--muted)}
-.qr:disabled{opacity:.6;cursor:wait}
-.vh{position:absolute;width:1px;height:1px;opacity:0;overflow:hidden;pointer-events:none}
-.scan{position:relative;border-radius:14px;overflow:hidden;background:#000;aspect-ratio:3/4;max-width:100%}
-.scan video{width:100%;height:100%;object-fit:cover;display:block}
-.scanbox{position:absolute;left:50%;top:44%;width:62%;aspect-ratio:1;transform:translate(-50%,-50%);border:3px solid var(--glow);border-radius:12px;box-shadow:0 0 0 999px rgba(0,0,0,.35)}
-.scanbar{position:absolute;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;background:rgba(0,0,0,.55);color:#fff;font-size:.85rem}
-.scanbar .chip{color:#fff;border-color:rgba(255,255,255,.5)}
-a.ext{text-decoration:none;color:var(--accent);border-color:var(--accent)}
-.found{display:grid;gap:4px;font-family:var(--mono);font-size:.8rem;color:var(--muted)}
-.found b{color:var(--up);font-weight:500}
-.found .win{color:var(--accent);font-weight:500}
-.found .hit{color:var(--fg);text-decoration:underline;text-decoration-color:var(--accent);text-underline-offset:3px}
+.howto{display:grid;gap:10px}
+.howto div{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start}
+.howto .k{font-family:var(--display);font-size:1rem;border-radius:10px;padding:6px 10px;white-space:nowrap;line-height:1.2}
+.howto .k.fx{background:var(--accent);color:#fff}
+.howto .k.ex{background:var(--up-soft);color:var(--up);border:1px solid var(--up)}
+.howto .k.go{background:var(--accent-soft);color:var(--accent)}
+.howto p{margin:0;font-size:.9rem;word-break:keep-all}
+.howto p small{display:block;color:var(--muted);font-size:.8rem}
 .latest{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:.82rem;color:var(--muted);justify-content:center}
 .latest .mini{display:inline-flex;gap:4px}
 .latest .mini i{font-style:normal;font-family:var(--mono);font-size:.78rem;width:26px;height:26px;border-radius:50%;display:grid;place-items:center;color:#fff;font-variant-numeric:tabular-nums}
 .latest .mini i.bo{background:transparent;border:1.5px solid var(--line);color:var(--fg)}
-.game{flex-wrap:wrap}
-.bal{flex-basis:100%;padding-left:calc(1.2em + 8px);font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-top:-2px}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.mode{border:2px solid var(--line);background:var(--panel);color:var(--muted);border-radius:12px;padding:10px;font:inherit;font-weight:700;font-size:1rem;cursor:pointer}
+.mode.on[data-m="fix"]{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.mode.on[data-m="ex"]{border-color:var(--up);color:var(--up);background:var(--up-soft)}
 .grid{display:grid;grid-template-columns:repeat(9,1fr);gap:5px}
 .cell{aspect-ratio:1;max-width:100%;border:1px solid var(--line);border-radius:9px;background:var(--panel);color:var(--fg);
   font-family:var(--mono);font-size:.9rem;cursor:pointer;display:grid;place-items:center;padding:0;font-variant-numeric:tabular-nums}
 .cell.up{background:var(--up-soft);border-color:var(--up);color:var(--up);font-weight:500}
+.cell.fix{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:500}
 .cell:focus-visible,button:focus-visible,select:focus-visible{outline:2px solid var(--glow);outline-offset:2px}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .hint{font-size:.85rem;color:var(--muted);margin:0}
@@ -87,7 +77,7 @@ select{font:inherit;padding:9px 10px;border-radius:10px;border:1px solid var(--l
   box-shadow:0 8px 24px -10px var(--accent);letter-spacing:.02em}
 .go:disabled{opacity:.6;cursor:wait}
 .games{display:grid;gap:8px}
-.game{display:flex;align-items:center;gap:8px}
+.game{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .game .tag{font-family:var(--display);font-size:1.05rem;color:var(--muted);width:1.2em}
 .balls{display:flex;gap:6px;flex:1;min-width:0}
 .ball{flex:1;aspect-ratio:1;max-width:48px;border-radius:50%;display:grid;place-items:center;font-family:var(--mono);font-weight:500;
@@ -95,12 +85,13 @@ select{font:inherit;padding:9px 10px;border-radius:10px;border:1px solid var(--l
 .ball.super{color:var(--fg);background:transparent;border:1.5px dashed var(--glow);animation:fl .09s steps(1) infinite}
 .ball.settle{transform:scale(1.18)}
 .r1{background:var(--b1);color:#1c1b33}.r2{background:var(--b2)}.r3{background:var(--b3)}.r4{background:var(--b4)}.r5{background:var(--b5)}
+.bal{flex-basis:100%;padding-left:calc(1.2em + 8px);font-family:var(--mono);font-size:.72rem;color:var(--muted);margin-top:-2px}
 @keyframes fl{50%{opacity:.5}}
 @media (prefers-reduced-motion:reduce){.ball.super{animation:none}.ball{transition:none}}
 .meta{font-family:var(--mono);font-size:.75rem;color:var(--muted)}
 .share{background:var(--panel);color:var(--fg);border:1px solid var(--accent);border-radius:12px;padding:12px;font:inherit;font-weight:700;cursor:pointer;width:100%}
 .toast{font-size:.85rem;color:var(--accent);min-height:1.3em;text-align:center}
-.fine{font-size:.8rem;color:var(--muted);text-align:center;margin:0;max-width:44ch;justify-self:center}
+.fine{font-size:.8rem;color:var(--muted);text-align:center;margin:0;max-width:44ch;justify-self:center;word-break:keep-all}
 </style>
 </head>
 <body>
@@ -109,36 +100,20 @@ select{font:inherit;padding:9px 10px;border-radius:10px;border:1px solid var(--l
   <header class="hero">
     <h1>양자 얽힘을 이용한<br><span>로또조합기</span></h1>
     <p class="maker">만든이 <b>한규태</b></p>
+    <p class="intro">큐비트 6개를 겹쳐 놓고 측정하는 순간, 하나의 번호로 붕괴합니다. 꼭 넣을 번호와 뺄 번호만 정하면 나머지는 양자가 고릅니다.</p>
     <p class="ket">|ψ⟩ = H<sup>⊗6</sup>|000000⟩</p>
   </header>
+
+  <section class="card howto">
+    <div><span class="k fx">고정수</span><p>모든 게임에 반드시 들어갈 번호. 생일, 기념일, 느낌 오는 숫자.<small>최대 5개</small></p></div>
+    <div><span class="k ex">제외수</span><p>이번엔 빼고 싶은 번호. 지난주에 산 번호, 지난 회차 당첨번호, 싫은 숫자.<small>지난주 산 번호를 빼면 두 티켓이 얽힌 짝처럼 서로 겹치지 않아요</small></p></div>
+    <div><span class="k go">생성</span><p>게임 수를 고르고 버튼을 누르면 남은 번호 안에서 측정이 일어납니다.<small>1~10게임, 결과는 복사해서 카톡으로</small></p></div>
+  </section>
 
   <div class="latest" id="latest" hidden></div>
 
   <section class="card">
-    <div class="step"><b>1. 이미 산 로또 있어?</b><small>없으면 바로 2번으로</small></div>
-    <button class="qr" id="qrBtn" type="button">
-      <svg viewBox="0 0 36 36" fill="none" stroke="currentColor" stroke-width="2.2" aria-hidden="true">
-        <rect x="3" y="3" width="11" height="11" rx="2"/><rect x="22" y="3" width="11" height="11" rx="2"/><rect x="3" y="22" width="11" height="11" rx="2"/>
-        <rect x="7" y="7" width="3" height="3" fill="currentColor" stroke="none"/><rect x="26" y="7" width="3" height="3" fill="currentColor" stroke="none"/><rect x="7" y="26" width="3" height="3" fill="currentColor" stroke="none"/>
-        <path d="M22 22h4v4h-4zM29 22h4M22 30h4M29 29h4v4"/>
-      </svg>
-      <span>용지 QR 스캔<small>카메라를 오른쪽 위 QR에 비추면 자동으로 읽어요</small></span>
-    </button>
-    <div class="scan" id="scan" hidden>
-      <video id="video" playsinline muted autoplay></video>
-      <div class="scanbox" aria-hidden="true"></div>
-      <div class="scanbar">
-        <span id="scanMsg">QR을 네모 안에 맞춰 주세요</span>
-        <button class="chip" id="scanStop" type="button">닫기</button>
-      </div>
-    </div>
-    <div class="row">
-      <button class="chip" id="photoBtn" type="button">카메라가 안 되면 사진으로</button>
-      <a class="chip ext" id="extLink" hidden>크롬에서 열기</a>
-    </div>
-    <input class="vh" type="file" id="cam" accept="image/*" capture="environment" tabindex="-1">
-    <p class="hint" id="qrHint">QR 한 장이면 번호를 제외수로 올리고, 추첨이 끝난 회차면 몇 등인지도 바로 채점합니다. 직접 눌러서 표시해도 돼요.</p>
-    <div class="found" id="found" hidden></div>
+    <div class="step"><b>1. 번호 정하기</b><small>안 정해도 돼요. 그러면 45개 전체에서 뽑아요</small></div>
     <div class="modes">
       <button class="mode on" data-m="fix" id="mFix" type="button">고정수</button>
       <button class="mode" data-m="ex" id="mEx" type="button">제외수</button>
@@ -147,6 +122,7 @@ select{font:inherit;padding:9px 10px;border-radius:10px;border:1px solid var(--l
     <div class="grid" id="grid"></div>
     <div class="row">
       <button class="chip" id="clear" type="button">모두 지우기</button>
+      <button class="chip" id="exLast" type="button" hidden>지난 회차 당첨번호 제외</button>
       <span class="hint" id="poolinfo"></span>
     </div>
   </section>
@@ -169,7 +145,7 @@ select{font:inherit;padding:9px 10px;border-radius:10px;border:1px solid var(--l
     <div class="toast" id="toast"></div>
   </section>
 
-  <p class="fine">큐비트 6개를 H 게이트로 겹친 뒤 측정해 64개 상태 중 하나로 붕괴시킵니다. 이미 산 번호에 떨어지면 기각하고 다시 측정해요. 1등 확률은 어떻게 뽑든 1/8,145,060, 홀짝·저고·합계 밸런스도 참고용일 뿐 확률은 똑같습니다. QR은 폰 안에서만 읽고 어디에도 보내지 않아요. 당첨번호는 매주 토요일 밤 자동 갱신.</p>
+  <p class="fine">큐비트 6개를 H 게이트로 겹친 뒤 측정해 64개 상태 중 하나로 붕괴시킵니다. 제외수나 이미 나온 번호에 떨어지면 기각하고 다시 측정해요. 1등 확률은 어떻게 뽑든 1/8,145,060이고, 홀짝·저고·합계 밸런스도 참고용일 뿐 확률은 똑같습니다. 예측이 아니라 편향 없이 재미있게 고르는 도구예요. 당첨번호는 매주 토요일 밤 자동 갱신.</p>
 </div>
 
 <script>
@@ -179,16 +155,17 @@ for(let q=0;q<N;q++){const bit=1<<q;for(let i=0;i<DIM;i++){if(i&bit)continue;con
 const rnd=()=>{const u=new Uint32Array(2);crypto.getRandomValues(u);return (u[0]*4294967296+u[1])/18446744073709551616;};
 const measure=()=>{const r=rnd();let acc=0;for(let k=0;k<DIM;k++){acc+=amp[k]*amp[k];if(r<acc)return k;}return DIM-1;};
 
-const up=new Set(); const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const up=new Set(), fix=new Set(); let mode='fix';
+const reduce=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const $=id=>document.getElementById(id);
 const rank=n=>n<=10?1:n<=20?2:n<=30?3:n<=40?4:5, sleep=ms=>new Promise(r=>setTimeout(r,ms));
-let results=[],meas=0,rej=0,tickets=[];
+const pad2=v=>String(v).padStart(2,'0');
+let results=[],meas=0,rej=0;
 
 const countEl=$('count');for(let i=1;i<=10;i++){const o=document.createElement('option');o.value=i;o.textContent=i+'게임';if(i===5)o.selected=true;countEl.appendChild(o);}
 
-const fix=new Set(); let mode='fix';
-const HINTS={fix:'번호 조합에 반드시 들어가는 숫자입니다. 최대 5개까지 고를 수 있어요.',
-  ex:'번호 조합에서 빠지는 숫자입니다. QR로 읽은 번호는 여기에 자동으로 들어가요.'};
+const HINTS={fix:'모든 게임에 반드시 들어갈 번호를 누르세요. 최대 5개.',
+  ex:'이번엔 빼고 싶은 번호를 누르세요. 지난주 산 번호, 싫은 숫자 등.'};
 function setMode(m){mode=m;$('mFix').classList.toggle('on',m==='fix');$('mEx').classList.toggle('on',m==='ex');
   $('mFix').setAttribute('aria-pressed',m==='fix');$('mEx').setAttribute('aria-pressed',m==='ex');$('modeHint').textContent=HINTS[m];}
 $('mFix').onclick=()=>setMode('fix'); $('mEx').onclick=()=>setMode('ex'); setMode('fix');
@@ -202,139 +179,24 @@ function renderGrid(){const g=$('grid');g.innerHTML='';
     b.setAttribute('aria-pressed',fix.has(v)||up.has(v));b.onclick=()=>tap(v);g.appendChild(b);}
   const rest=45-fix.size-up.size;
   $('poolinfo').textContent=(fix.size||up.size)?`고정 ${fix.size} · 제외 ${up.size} · 남은 숫자 ${rest}개`:'전체 45개에서 뽑습니다';}
-$('clear').onclick=()=>{up.clear();fix.clear();tickets=[];$('found').hidden=true;renderGrid();};
+$('clear').onclick=()=>{up.clear();fix.clear();renderGrid();};
 renderGrid();
 
-// ---- 당첨번호 (같은 폴더의 draws.json, GitHub Actions가 매주 갱신) ----
-let draws=null; // {latest, draws:{"1248":{d,n:[6],b}}}
-const pad2=v=>String(v).padStart(2,'0');
+// ---- 최근 당첨번호 (같은 폴더의 draws.json, 매주 자동 갱신) ----
+let draws=null;
 const fmtD=d=>{const [y,m,dd]=d.split('-');return `${+m}/${+dd}`;};
-function drawDateOf(round){ // 알려진 최신 회차 날짜에서 주 단위로 추정
-  if(!draws) return null; const L=draws.draws[String(draws.latest)]; if(!L) return null;
-  const t=new Date(L.d+'T00:00:00'); t.setDate(t.getDate()+7*(round-draws.latest)); return `${t.getMonth()+1}/${t.getDate()}(토)`;
-}
-function score(nums,dr){ // 등수: 6개=1, 5개+보너스=2, 5개=3, 4개=4, 3개=5
-  const hit=nums.filter(v=>dr.n.includes(v)); const m=hit.length, bo=nums.includes(dr.b);
-  const r=m===6?1:(m===5&&bo)?2:m===5?3:m===4?4:m===3?5:0; return {m,bo,r,hit};
-}
-const RANK=['낙첨','1등','2등','3등','4등','5등'];
 (async()=>{
   try{const r=await fetch('draws.json',{cache:'no-store'}); if(!r.ok) return; const j=await r.json();
     if(!j||!j.draws||!j.latest) return; draws=j;
     const L=draws.draws[String(draws.latest)];
     $('latest').innerHTML=`<span>최근 추첨 제${draws.latest}회 (${fmtD(L.d)})</span><span class="mini">${L.n.map(v=>`<i class="r${rank(v)}">${v}</i>`).join('')}<i class="bo">+${L.b}</i></span>`;
-    $('latest').hidden=false; if(tickets.length) renderFound();
+    $('latest').hidden=false;
+    const b=$('exLast'); b.hidden=false; b.textContent=`제${draws.latest}회 당첨번호 제외`;
+    b.onclick=()=>{[...L.n,L.b].forEach(v=>{fix.delete(v);up.add(v);}); setMode('ex'); renderGrid();};
   }catch(e){}
 })();
-function renderFound(){
-  const html=tickets.map(tk=>{
-    const dr=draws&&draws.draws[String(tk.round)];
-    const head=dr?`제${tk.round}회 · ${tk.games.length}게임 · 당첨번호 ${dr.n.map(pad2).join(' ')} +${dr.b}`
-      :`제${tk.round}회 · ${tk.games.length}게임 · 추첨 전${drawDateOf(tk.round)?' ('+drawDateOf(tk.round)+' 추첨)':''}`;
-    const rows=tk.games.map((g,i)=>{
-      const tag=String.fromCharCode(65+i);
-      if(!dr) return `<span>${tag}  ${g.map(pad2).join(' ')}</span>`;
-      const s=score(g,dr);
-      const nums=g.map(v=>s.hit.includes(v)?`<span class="hit">${pad2(v)}</span>`:pad2(v)).join(' ');
-      const res=s.r?`<span class="win">${RANK[s.r]}</span>`:`${s.m}개 일치${s.bo?' +보너스':''} · 낙첨`;
-      return `<span>${tag}  ${nums}  ${res}</span>`;
-    }).join('');
-    let sum='';
-    if(dr){const best=Math.min(...tk.games.map(g=>score(g,dr).r||9));
-      sum=best<9?`<span class="win">축하해요! 이 용지에서 ${RANK[best]} 당첨 게임이 있어요.</span>`:`<span>이 용지는 전부 낙첨이에요. 다음 회차로 가요.</span>`;}
-    return `<span>${head}</span>${rows}${sum}`;
-  }).join('')+`<span><b>${up.size}개</b> 번호를 얽힌 짝(제외수)으로 표시했어요.</span>`;
-  $('found').innerHTML=html; $('found').hidden=false;
-}
 function balance(g){const odd=g.filter(v=>v%2).length, low=g.filter(v=>v<=22).length, sum=g.reduce((a,b)=>a+b,0);
   return `홀${odd}·짝${6-odd}  저${low}·고${6-low}  합 ${sum}`;}
-
-// ---- 용지 QR 읽기: 동행복권 QR = http://qr.dhlottery.co.kr/?v=회차 + (q|m)+12자리 × 게임수 + 일련번호 ----
-function parseTicket(text){
-  const m=/v=(\d{3,5})((?:[qm]\d{12})+)/i.exec(text||''); if(!m) return null;
-  const games=m[2].match(/[qm]\d{12}/gi).map(g=>{const d=g.slice(1);const nums=[];for(let i=0;i<12;i+=2)nums.push(+d.slice(i,i+2));return nums;})
-    .filter(ns=>ns.every(v=>v>=1&&v<=45)&&new Set(ns).size===6);
-  return games.length?{round:+m[1],games}:null;
-}
-// 사진 파일 → 그릴 수 있는 이미지 (EXIF 회전 반영)
-async function loadImage(file){
-  if(window.createImageBitmap){ try{ return await createImageBitmap(file,{imageOrientation:'from-image'}); }catch(e){} }
-  return new Promise((res,rej)=>{const url=URL.createObjectURL(file);const im=new Image();
-    im.onload=()=>{URL.revokeObjectURL(url);res(im)};im.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('decode'))};im.src=url;});
-}
-const dimsOf=im=>[im.naturalWidth||im.videoWidth||im.width, im.naturalHeight||im.videoHeight||im.height];
-const qcv=document.createElement('canvas'), qctx=qcv.getContext('2d',{willReadFrequently:true});
-function scanOnce(src,W,crop,inv){ // 한 번 그려서 jsQR 시도
-  const [w,h]=dimsOf(src); const [sx,sy,sw,sh]=crop||[0,0,w,h];
-  const sc=Math.min(1,W/Math.max(sw,sh)); qcv.width=Math.max(1,Math.round(sw*sc)); qcv.height=Math.max(1,Math.round(sh*sc));
-  qctx.drawImage(src,sx,sy,sw,sh,0,0,qcv.width,qcv.height);
-  const d=qctx.getImageData(0,0,qcv.width,qcv.height);
-  const r=jsQR(d.data,d.width,d.height,{inversionAttempts:inv||'dontInvert'}); return r&&r.data?r.data:null;
-}
-async function decodeQR(im){ // 사진: 전체 → 오른쪽 위 → 가운데 → 반전까지 여러 번 시도
-  if(typeof jsQR!=='function') throw new Error('nolib');
-  const [w,h]=dimsOf(im);
-  const tries=[[1000],[1600],[700],[1300,[w/2,0,w/2,h/2]],[1300,[w/4,h/4,w/2,h/2]],[2200],[1600,null,'attemptBoth']];
-  for(const [W,crop,inv] of tries){ const t=scanOnce(im,W,crop,inv); if(t) return t; await sleep(0); }
-  return null;
-}
-function applyTicketText(text){
-  const hint=$('qrHint'); const t=parseTicket(text);
-  if(!t){hint.textContent='로또 용지 QR이 아닌 것 같아요. 용지 오른쪽 위의 큰 QR을 비춰 주세요.';return false;}
-  if(tickets.some(k=>JSON.stringify(k)===JSON.stringify(t))){hint.textContent='이미 읽은 용지예요.';return true;}
-  tickets.push(t); t.games.forEach(g=>g.forEach(v=>{fix.delete(v);up.add(v);})); renderGrid();
-  renderFound(); hint.textContent='읽었어요. 용지가 더 있으면 QR을 또 비추면 번호가 추가됩니다.';
-  if(navigator.vibrate) try{navigator.vibrate(60);}catch(e){}
-  return true;
-}
-// ---- 1순위: 실시간 카메라 스캔 ----
-let stream=null, scanTimer=0;
-async function startScan(){
-  const hint=$('qrHint');
-  if(typeof jsQR!=='function'){hint.textContent='QR 읽기 프로그램을 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요.';return;}
-  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){hint.textContent='이 브라우저는 카메라를 못 써요. 아래 "사진으로" 버튼을 쓰거나 크롬·사파리로 열어 주세요.';showExt();return;}
-  try{
-    stream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:1280}},audio:false});
-  }catch(e){
-    const m={NotAllowedError:'카메라 허용을 안 하셨어요. 주소창의 자물쇠에서 카메라를 허용하거나, 아래 "사진으로" 버튼을 써 주세요.',
-      NotFoundError:'카메라를 찾지 못했어요. 아래 "사진으로" 버튼을 써 주세요.'};
-    hint.textContent=m[e&&e.name]||('카메라를 열지 못했어요 ('+(e&&e.name||'오류')+'). 아래 "사진으로" 버튼을 써 주세요.'); showExt(); return;
-  }
-  const v=$('video'); v.srcObject=stream; $('scan').hidden=false; $('qrBtn').disabled=true; $('scanMsg').textContent='QR을 네모 안에 맞춰 주세요';
-  try{await v.play();}catch(e){}
-  let n=0;
-  const tick=()=>{ if(!stream) return;
-    if(v.readyState>=2&&v.videoWidth){ n++;
-      const [w,h]=dimsOf(v); const s=Math.min(w,h)*0.8; const crop=[(w-s)/2,(h-s)/2-h*0.06,s,s];
-      let text=null; try{ text=scanOnce(v,640,crop)||(n%3===0?scanOnce(v,900):null); }catch(e){}
-      if(text){ stopScan(); applyTicketText(text); return; }
-      if(n===40) $('scanMsg').textContent='조금 더 가까이, 흔들리지 않게 잡아 주세요';
-    }
-    scanTimer=setTimeout(tick,120); };
-  tick();
-}
-function stopScan(){ if(scanTimer){clearTimeout(scanTimer);scanTimer=0;} if(stream){stream.getTracks().forEach(t=>t.stop());stream=null;}
-  const v=$('video'); v.srcObject=null; $('scan').hidden=true; $('qrBtn').disabled=false; }
-$('qrBtn').onclick=startScan; $('scanStop').onclick=()=>{stopScan();$('qrHint').textContent='닫았어요. 다시 스캔하거나 "사진으로"를 눌러 주세요.';};
-document.addEventListener('visibilitychange',()=>{if(document.hidden&&stream) stopScan();});
-// ---- 2순위: 사진 찍어서 읽기 ----
-async function readTicket(file){
-  if(!file) return;
-  const hint=$('qrHint'); hint.textContent='사진에서 QR을 읽는 중…';
-  try{
-    const im=await loadImage(file); await sleep(30);
-    const text=await decodeQR(im);
-    if(!text){hint.textContent='사진에서 QR을 찾지 못했어요. QR이 화면의 1/3 이상 차지하게 가까이서, 흔들리지 않게 찍어 주세요.';return;}
-    applyTicketText(text);
-  }catch(e){hint.textContent=e&&e.message==='nolib'?'QR 읽기 프로그램을 불러오지 못했어요. 인터넷 연결을 확인하고 새로고침해 주세요.':'사진을 열지 못했어요 ('+(e&&e.message||'오류')+'). 다시 찍어 주세요.';}
-}
-$('photoBtn').onclick=()=>{stopScan();$('cam').click();};
-$('cam').addEventListener('change',e=>{const f=e.target.files&&e.target.files[0]; if(!f){$('qrHint').textContent='사진이 넘어오지 않았어요. 크롬·사파리로 열어서 다시 시도해 주세요.';showExt();} readTicket(f); e.target.value='';});
-// 카톡·인스타 등 앱 안 브라우저는 카메라를 막는 경우가 많아서 외부 브라우저로 여는 길을 보여줌
-function showExt(){ const a=$('extLink'); if(!a.hidden) return; const ua=navigator.userAgent;
-  if(/Android/i.test(ua)){ a.href='intent://'+location.host+location.pathname+location.search+'#Intent;scheme=https;package=com.android.chrome;end'; a.textContent='크롬에서 열기'; a.hidden=false; }
-  else if(/iPhone|iPad/i.test(ua)){ a.textContent='사파리로 열기: 오른쪽 위 ⋯ → 다른 브라우저로 열기'; a.href='#'; a.onclick=e=>e.preventDefault(); a.hidden=false; } }
-if(/KAKAOTALK|Instagram|FBAN|FBAV|NAVER\(inapp|Line\//i.test(navigator.userAgent)) showExt();
 
 function renderGames(n){const g=$('games');g.innerHTML='';
   for(let i=0;i<n;i++){const d=document.createElement('div');d.className='game';
@@ -368,7 +230,7 @@ async function run(){
 $('go').onclick=run;
 $('share').onclick=()=>{
   if(!results.length){$('toast').textContent='먼저 번호를 생성해 주세요.';return;}
-  const lines=results.map((r,i)=>`${String.fromCharCode(65+i)}  ${r.map(v=>String(v).padStart(2,'0')).join(' ')}`);
+  const lines=results.map((r,i)=>`${String.fromCharCode(65+i)}  ${r.map(pad2).join(' ')}`);
   const text=['⚛ 양자 얽힘 로또조합기 · 만든이 한규태',...lines,fix.size?`고정수 ${[...fix].sort((a,b)=>a-b).join(' ')}`:'',up.size?`제외수 ${up.size}개`:'',`측정 ${meas}회 · 기각 ${rej}회`].filter(Boolean).join('\n');
   navigator.clipboard.writeText(text).then(()=>{$('toast').textContent='복사했어요. 카톡에 붙여넣기!';})
     .catch(()=>{$('toast').textContent=text.replace(/\n/g,' / ');});
