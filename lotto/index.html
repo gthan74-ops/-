@@ -141,7 +141,7 @@ select{font:inherit;padding:9px 10px;border-radius:10px;border:1px solid var(--l
     <div class="step"><b>3. 붕괴된 번호</b><small id="round"></small></div>
     <div class="games" id="games"></div>
     <div class="meta" id="meta"></div>
-    <button class="share" id="share" type="button">번호 복사해서 친구에게 보내기</button>
+    <button class="share" id="share" type="button">번호 복사하기</button>
     <div class="toast" id="toast"></div>
   </section>
 
@@ -232,7 +232,7 @@ $('share').onclick=()=>{
   if(!results.length){$('toast').textContent='먼저 번호를 생성해 주세요.';return;}
   const lines=results.map((r,i)=>`${String.fromCharCode(65+i)}  ${r.map(pad2).join(' ')}`);
   const text=['⚛ 양자 얽힘 로또조합기 · 만든이 한규태',...lines,fix.size?`고정수 ${[...fix].sort((a,b)=>a-b).join(' ')}`:'',up.size?`제외수 ${up.size}개`:'',`측정 ${meas}회 · 기각 ${rej}회`].filter(Boolean).join('\n');
-  navigator.clipboard.writeText(text).then(()=>{$('toast').textContent='복사했어요. 카톡에 붙여넣기!';})
+  navigator.clipboard.writeText(text).then(()=>{$('toast').textContent='복사했어요.';})
     .catch(()=>{$('toast').textContent=text.replace(/\n/g,' / ');});
 };
 </script>
